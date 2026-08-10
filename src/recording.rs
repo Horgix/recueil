@@ -1,5 +1,6 @@
 use axum_typed_multipart::{FieldData, TryFromMultipart};
 use bytes::Bytes;
+use chrono::{DateTime, Utc};
 use serde::Serialize;
 
 /// Raw multipart form as sent by the Index webhook.
@@ -16,10 +17,13 @@ pub struct RecordingForm {
 impl RecordingForm {
     /// Convert into the domain type. Warns if the X-Audio-Size header
     /// disagrees with the actual buffered audio length.
-    pub fn into_recording(self, audio_size_hint: Option<usize>) -> Recording {
-        Recording {
+    pub fn into_recording(self, audio_size_hint: Option<usize>) -> Result<Recording, String> {
+        let recorded_at = DateTime::from_timestamp_millis(self.recorded_at_ms as i64).ok_or(
+            format!("invalid recordedAt timestamp: {}", self.recorded_at_ms),
+        )?;
+        Ok(Recording {
             client: self.client,
-            recorded_at_ms: self.recorded_at_ms,
+            recorded_at,
             transcription: self.transcription,
             audio: self.audio.map(|f| {
                 let size_bytes = f.contents.len();
@@ -30,7 +34,7 @@ impl RecordingForm {
                 }
                 AudioPayload { size_bytes }
             }),
-        }
+        })
     }
 }
 
@@ -42,7 +46,7 @@ pub struct AudioPayload {
 #[derive(Debug, Serialize)]
 pub struct Recording {
     pub client: String,
-    pub recorded_at_ms: u64,
+    pub recorded_at: DateTime<Utc>,
     pub transcription: Option<String>,
     pub audio: Option<AudioPayload>, // Doing nothing with the audio itself for now
 }

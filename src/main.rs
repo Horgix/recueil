@@ -72,7 +72,10 @@ async fn handle_webhook(
         .and_then(|v| v.to_str().ok())
         .and_then(|v| v.parse::<usize>().ok());
 
-    let recording = form.into_recording(audio_size_hint);
+    let recording = form.into_recording(audio_size_hint).map_err(|e| {
+        eprintln!("{e}");
+        StatusCode::BAD_REQUEST
+    })?;
     println!("{recording:#?}");
 
     Ok("ok")
