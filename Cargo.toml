@@ -5,5 +5,8 @@ authors = ["Alexis Horgix Chotard <pebbleindexwebhook@foss.horgix.fr>"]
 edition = "2024"
 
 [dependencies]
-axum = { version = "0.7", features = ["multipart"] }
-tokio = { version = "1", features = ["full"] }
+axum = { version = "0.8", features = ["multipart"] }
+axum_typed_multipart = "0.16"
+bytes = "1"
+tokio = { version = "1.53", features = ["full"] }
+serde = { version = "1.0.229", features = ["derive"] }

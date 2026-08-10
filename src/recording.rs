@@ -1,0 +1,48 @@
+use axum_typed_multipart::{FieldData, TryFromMultipart};
+use bytes::Bytes;
+use serde::Serialize;
+
+/// Raw multipart form as sent by the Index webhook.
+/// Field names map directly to the multipart field names from the spec.
+#[derive(TryFromMultipart)]
+pub struct RecordingForm {
+    pub client: String,
+    #[form_data(field_name = "recordedAt")]
+    pub recorded_at_ms: u64,
+    pub transcription: Option<String>,
+    pub audio: Option<FieldData<Bytes>>,
+}
+
+impl RecordingForm {
+    /// Convert into the domain type. Warns if the X-Audio-Size header
+    /// disagrees with the actual buffered audio length.
+    pub fn into_recording(self, audio_size_hint: Option<usize>) -> Recording {
+        Recording {
+            client: self.client,
+            recorded_at_ms: self.recorded_at_ms,
+            transcription: self.transcription,
+            audio: self.audio.map(|f| {
+                let size_bytes = f.contents.len();
+                if let Some(hint) = audio_size_hint {
+                    if hint != size_bytes {
+                        eprintln!("audio size mismatch: X-Audio-Size={hint}, actual={size_bytes}");
+                    }
+                }
+                AudioPayload { size_bytes }
+            }),
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct AudioPayload {
+    pub size_bytes: usize,
+}
+
+#[derive(Debug, Serialize)]
+pub struct Recording {
+    pub client: String,
+    pub recorded_at_ms: u64,
+    pub transcription: Option<String>,
+    pub audio: Option<AudioPayload>, // Doing nothing with the audio itself for now
+}
