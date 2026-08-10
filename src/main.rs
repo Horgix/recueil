@@ -1,10 +1,13 @@
-use axum::extract::FromRequest;
 use axum::{
     Router,
-    extract::{Multipart, Request, State},
+    extract::State,
     http::{HeaderMap, StatusCode},
     routing::post,
 };
+use axum_typed_multipart::TypedMultipart;
+
+mod recording;
+use recording::RecordingForm;
 
 #[derive(Clone)]
 struct AppState {
@@ -29,7 +32,7 @@ async fn main() {
     let state = AppState { auth_token };
 
     let app = Router::new()
-        .route("/", post(handle_request))
+        .route("/", post(handle_webhook))
         .with_state(state);
 
     let listener = tokio::net::TcpListener::bind(("0.0.0.0", port))
@@ -40,10 +43,10 @@ async fn main() {
     axum::serve(listener, app).await.expect("server error");
 }
 
-async fn handle_request(
+async fn handle_webhook(
     State(state): State<AppState>,
     headers: HeaderMap,
-    request: Request,
+    TypedMultipart(form): TypedMultipart<RecordingForm>,
 ) -> Result<&'static str, StatusCode> {
     let expected = format!("Bearer {}", state.auth_token);
     match headers.get("authorization") {
@@ -64,58 +67,13 @@ async fn handle_request(
         },
     }
 
-    println!("============================================================");
-    println!("> {} {}\n", request.method(), request.uri());
+    let audio_size_hint = headers
+        .get("x-audio-size")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.parse::<usize>().ok());
 
-    println!("Headers:");
-    for (name, value) in &headers {
-        println!("  {}: {}", name, value.to_str().unwrap_or("<binary>"));
-    }
-    println!();
+    let recording = form.into_recording(audio_size_hint);
+    println!("{recording:#?}");
 
-    let content_type = match headers.get("content-type").and_then(|v| v.to_str().ok()) {
-        Some(ct) => ct.to_string(),
-        None => {
-            eprintln!("REJECTED: missing Content-Type header");
-            return Err(StatusCode::BAD_REQUEST);
-        }
-    };
-
-    if content_type.contains("multipart/form-data") {
-        let mut multipart = Multipart::from_request(request, &())
-            .await
-            .map_err(|_| StatusCode::BAD_REQUEST)?;
-
-        println!("Multipart fields:");
-        while let Some(field) = multipart.next_field().await.map_err(|e| {
-            eprintln!("multipart error: {e}");
-            StatusCode::BAD_REQUEST
-        })? {
-            let name = field.name().unwrap_or("<unnamed>").to_string();
-            let content_type = field
-                .content_type()
-                .map(|ct| format!(", content-type={ct}"))
-                .unwrap_or_default();
-            let bytes = field.bytes().await.map_err(|_| StatusCode::BAD_REQUEST)?;
-            match std::str::from_utf8(&bytes) {
-                Ok(text) => println!("  [text] {name}{content_type} = {text:?}"),
-                Err(_) => println!("  [bin]  {name}{content_type}, {} bytes", bytes.len()),
-            }
-        }
-    } else {
-        let body = axum::body::to_bytes(request.into_body(), usize::MAX)
-            .await
-            .map_err(|_| StatusCode::BAD_REQUEST)?;
-        if body.is_empty() {
-            println!("(empty body)");
-        } else {
-            match std::str::from_utf8(&body) {
-                Ok(text) => println!("Body ({} bytes):\n{text}", body.len()),
-                Err(_) => println!("Body ({} bytes, binary)", body.len()),
-            }
-        }
-    }
-
-    println!();
     Ok("ok")
 }
