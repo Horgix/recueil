@@ -1,0 +1,9 @@
+[package]
+name = "index-webhook"
+version = "0.1.0"
+authors = ["Alexis Horgix Chotard <pebbleindexwebhook@foss.horgix.fr>"]
+edition = "2024"
+
+[dependencies]
+axum = { version = "0.7", features = ["multipart"] }
+tokio = { version = "1", features = ["full"] }
