@@ -91,13 +91,23 @@ async fn handle_webhook(
     })?;
     println!("{recording:#?}");
 
-    if let (Some(dir), Some(transcription)) = (&state.storage_dir, &recording.transcription) {
-        persistence::save_transcription(dir, &recording.recorded_at, transcription)
-            .await
-            .map_err(|e| {
-                eprintln!("failed to save transcription: {e}");
-                StatusCode::INTERNAL_SERVER_ERROR
-            })?;
+    if let Some(dir) = &state.storage_dir {
+        if let Some(transcription) = &recording.transcription {
+            persistence::save_transcription(dir, &recording.recorded_at, transcription)
+                .await
+                .map_err(|e| {
+                    eprintln!("failed to save transcription: {e}");
+                    StatusCode::INTERNAL_SERVER_ERROR
+                })?;
+        }
+        if let Some(audio) = &recording.audio {
+            persistence::save_audio(dir, &recording.recorded_at, &audio.data)
+                .await
+                .map_err(|e| {
+                    eprintln!("failed to save audio: {e}");
+                    StatusCode::INTERNAL_SERVER_ERROR
+                })?;
+        }
     }
 
     Ok("ok")
