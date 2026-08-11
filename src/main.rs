@@ -45,7 +45,7 @@ async fn main() {
     };
 
     let app = Router::new()
-        .route("/", post(handle_webhook))
+        .route("/webhook", post(handle_webhook))
         .with_state(state);
 
     let listener = tokio::net::TcpListener::bind(("0.0.0.0", port))
