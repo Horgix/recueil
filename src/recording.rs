@@ -48,11 +48,19 @@ impl RecordingForm {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Serialize)]
 pub struct AudioPayload {
     pub size_bytes: usize,
     #[serde(skip)]
     pub data: Bytes,
+}
+
+impl std::fmt::Debug for AudioPayload {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AudioPayload")
+            .field("size_bytes", &self.size_bytes)
+            .finish()
+    }
 }
 
 #[derive(Debug, Serialize)]
