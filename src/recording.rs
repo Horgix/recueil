@@ -15,25 +15,32 @@ pub struct RecordingForm {
 }
 
 impl RecordingForm {
-    /// Convert into the domain type. Warns if the X-Audio-Size header
-    /// disagrees with the actual buffered audio length.
+    /// Convert into the domain type. Fail if the `X-Audio-Size` header
+    /// disagrees with the actual buffered audio length or `recordedAt`
+    /// timestamp is wrong
     pub fn into_recording(self, audio_size_hint: Option<usize>) -> Result<Recording, String> {
         let recorded_at = DateTime::from_timestamp_millis(self.recorded_at_ms as i64).ok_or(
             format!("invalid recordedAt timestamp: {}", self.recorded_at_ms),
         )?;
+
+        let audio = if let Some(f) = self.audio {
+            let size_bytes = f.contents.len();
+            let hint = audio_size_hint.ok_or("audio present but X-Audio-Size header is missing")?;
+            if hint != size_bytes {
+                return Err(format!(
+                    "audio size mismatch: X-Audio-Size={hint}, actual={size_bytes}"
+                ));
+            }
+            Some(AudioPayload { size_bytes })
+        } else {
+            None
+        };
+
         Ok(Recording {
             client: self.client,
             recorded_at,
             transcription: self.transcription,
-            audio: self.audio.map(|f| {
-                let size_bytes = f.contents.len();
-                if let Some(hint) = audio_size_hint {
-                    if hint != size_bytes {
-                        eprintln!("audio size mismatch: X-Audio-Size={hint}, actual={size_bytes}");
-                    }
-                }
-                AudioPayload { size_bytes }
-            }),
+            audio,
         })
     }
 }
