@@ -1,0 +1,16 @@
+use chrono::{DateTime, Utc};
+use std::io;
+use std::path::Path;
+
+pub async fn save_transcription(
+    dir: &Path,
+    recorded_at: &DateTime<Utc>,
+    transcription: &str,
+) -> Result<(), io::Error> {
+    let filename = recorded_at.format("%Y-%m-%dT%H:%M:%SZ").to_string();
+    let path = dir.join("transcriptions").join(format!("{filename}.txt"));
+    tokio::fs::create_dir_all(path.parent().unwrap()).await?;
+    tokio::fs::write(&path, format!("{transcription}\n")).await?;
+    println!("transcription saved to {}", path.display());
+    Ok(())
+}

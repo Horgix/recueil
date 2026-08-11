@@ -5,13 +5,16 @@ use axum::{
     routing::post,
 };
 use axum_typed_multipart::TypedMultipart;
+use std::path::PathBuf;
 
+mod persistence;
 mod recording;
 use recording::RecordingForm;
 
 #[derive(Clone)]
 struct AppState {
     auth_token: String,
+    storage_dir: Option<PathBuf>,
 }
 
 #[tokio::main]
@@ -29,7 +32,17 @@ async fn main() {
         .parse()
         .expect("PORT must be a valid port number");
 
-    let state = AppState { auth_token };
+    let storage_dir = std::env::var("LOCAL_FILES_STORAGE_DIRECTORY")
+        .ok()
+        .map(PathBuf::from);
+    if let Some(ref dir) = storage_dir {
+        println!("Storage directory: {}", dir.display());
+    }
+
+    let state = AppState {
+        auth_token,
+        storage_dir,
+    };
 
     let app = Router::new()
         .route("/", post(handle_webhook))
@@ -77,6 +90,15 @@ async fn handle_webhook(
         StatusCode::BAD_REQUEST
     })?;
     println!("{recording:#?}");
+
+    if let (Some(dir), Some(transcription)) = (&state.storage_dir, &recording.transcription) {
+        persistence::save_transcription(dir, &recording.recorded_at, transcription)
+            .await
+            .map_err(|e| {
+                eprintln!("failed to save transcription: {e}");
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?;
+    }
 
     Ok("ok")
 }
