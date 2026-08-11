@@ -7,6 +7,7 @@ use axum::{
 use axum_typed_multipart::TypedMultipart;
 use std::path::PathBuf;
 
+mod metadata;
 mod persistence;
 mod recording;
 use recording::RecordingForm;
@@ -92,6 +93,12 @@ async fn handle_webhook(
     println!("{recording:#?}");
 
     if let Some(dir) = &state.storage_dir {
+        persistence::save_metadata(dir, &recording)
+            .await
+            .map_err(|e| {
+                eprintln!("failed to save metadata: {e}");
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?;
         if let Some(transcription) = &recording.transcription {
             persistence::save_transcription(dir, &recording.recorded_at, transcription)
                 .await

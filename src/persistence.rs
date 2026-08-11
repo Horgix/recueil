@@ -1,8 +1,25 @@
 use chrono::{DateTime, Utc};
 use std::io;
 use std::path::Path;
+use tokio::io::AsyncWriteExt;
+
+use crate::metadata::RecordingMetadata;
+use crate::recording::Recording;
 
 const DATETIME_FORMAT: &str = "%Y-%m-%dT%H-%M-%SZ";
+
+pub async fn save_metadata(dir: &Path, recording: &Recording) -> Result<(), io::Error> {
+    let metadata = RecordingMetadata::from(recording);
+    let path = dir.join("recordings.ndjson");
+    let line = serde_json::to_string(&metadata)
+        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+    let mut file = tokio::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&path)
+        .await?;
+    file.write_all(format!("{line}\n").as_bytes()).await
+}
 
 pub async fn save_audio(
     dir: &Path,
