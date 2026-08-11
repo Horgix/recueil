@@ -557,6 +557,7 @@ dependencies = [
  "bytes",
  "chrono",
  "serde",
+ "serde_json",
  "tokio",
 ]
 
