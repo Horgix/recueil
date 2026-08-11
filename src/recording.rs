@@ -31,7 +31,10 @@ impl RecordingForm {
                     "audio size mismatch: X-Audio-Size={hint}, actual={size_bytes}"
                 ));
             }
-            Some(AudioPayload { size_bytes })
+            Some(AudioPayload {
+                size_bytes,
+                data: f.contents,
+            })
         } else {
             None
         };
@@ -48,6 +51,8 @@ impl RecordingForm {
 #[derive(Debug, Serialize)]
 pub struct AudioPayload {
     pub size_bytes: usize,
+    #[serde(skip)]
+    pub data: Bytes,
 }
 
 #[derive(Debug, Serialize)]
@@ -55,5 +60,5 @@ pub struct Recording {
     pub client: String,
     pub recorded_at: DateTime<Utc>,
     pub transcription: Option<String>,
-    pub audio: Option<AudioPayload>, // Doing nothing with the audio itself for now
+    pub audio: Option<AudioPayload>,
 }
