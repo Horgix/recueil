@@ -1,7 +1,15 @@
+use bytes::Bytes;
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 
-use crate::recording::Recording;
+use crate::pebble::PebbleRecording;
+
+#[derive(Serialize)]
+pub struct AudioPayload {
+    pub size_bytes: usize,
+    #[serde(skip)]
+    pub data: Bytes,
+}
 
 #[derive(Debug, Serialize)]
 pub struct Transcription {
@@ -17,8 +25,8 @@ pub struct RecordingMetadata {
     pub transcriptions: Option<Vec<Transcription>>,
 }
 
-impl From<&Recording> for RecordingMetadata {
-    fn from(recording: &Recording) -> Self {
+impl From<&PebbleRecording> for RecordingMetadata {
+    fn from(recording: &PebbleRecording) -> Self {
         let mut transcriptions = Vec::new();
 
         if let Some(content) = &recording.transcription {
