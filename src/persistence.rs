@@ -3,8 +3,8 @@ use std::io;
 use std::path::Path;
 use tokio::io::AsyncWriteExt;
 
-use crate::metadata::RecordingMetadata;
 use crate::pebble::PebbleRecording;
+use crate::recording::RecordingMetadata;
 
 const DATETIME_FORMAT: &str = "%Y-%m-%dT%H-%M-%SZ";
 
