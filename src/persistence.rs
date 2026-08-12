@@ -8,7 +8,7 @@ use crate::recording::Recording;
 
 const DATETIME_FORMAT: &str = "%Y-%m-%dT%H-%M-%SZ";
 
-pub async fn save_metadata(dir: &Path, recording: &PebbleRecording) -> Result<(), io::Error> {
+pub async fn save_recording_info(dir: &Path, recording: &PebbleRecording) -> Result<(), io::Error> {
     let metadata = Recording::from(recording);
     let path = dir.join("recordings.ndjson");
     let line = serde_json::to_string(&metadata)
