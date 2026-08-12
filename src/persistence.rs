@@ -4,12 +4,12 @@ use std::path::Path;
 use tokio::io::AsyncWriteExt;
 
 use crate::pebble::PebbleRecording;
-use crate::recording::RecordingMetadata;
+use crate::recording::Recording;
 
 const DATETIME_FORMAT: &str = "%Y-%m-%dT%H-%M-%SZ";
 
 pub async fn save_metadata(dir: &Path, recording: &PebbleRecording) -> Result<(), io::Error> {
-    let metadata = RecordingMetadata::from(recording);
+    let metadata = Recording::from(recording);
     let path = dir.join("recordings.ndjson");
     let line = serde_json::to_string(&metadata)
         .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;

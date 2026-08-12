@@ -7,7 +7,7 @@ use serde::Serialize;
 /// Raw multipart form as sent by the Index webhook.
 /// Field names map directly to the multipart field names from the spec.
 #[derive(TryFromMultipart)]
-pub struct RecordingForm {
+pub struct WebhookPayload {
     pub client: String,
     #[form_data(field_name = "recordedAt")]
     pub recorded_at_ms: u64,
@@ -15,11 +15,14 @@ pub struct RecordingForm {
     pub audio: Option<FieldData<Bytes>>,
 }
 
-impl RecordingForm {
-    /// Convert into the domain type. Fail if the `X-Audio-Size` header
-    /// disagrees with the actual buffered audio length or `recordedAt`
-    /// timestamp is wrong
-    pub fn into_recording(self, audio_size_hint: Option<usize>) -> Result<PebbleRecording, String> {
+impl WebhookPayload {
+    /// Convert into the domain type.
+    /// Fail if the `X-Audio-Size` header disagrees with the actual buffered
+    /// audio length or `recordedAt` timestamp is wrong
+    pub fn into_pebble_recording(
+        self,
+        audio_size_hint: Option<usize>,
+    ) -> Result<PebbleRecording, String> {
         let recorded_at = DateTime::from_timestamp_millis(self.recorded_at_ms as i64).ok_or(
             format!("invalid recordedAt timestamp: {}", self.recorded_at_ms),
         )?;
@@ -46,14 +49,6 @@ impl RecordingForm {
             transcription: self.transcription,
             audio,
         })
-    }
-}
-
-impl std::fmt::Debug for AudioPayload {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("AudioPayload")
-            .field("size_bytes", &self.size_bytes)
-            .finish()
     }
 }
 
