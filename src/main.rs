@@ -10,7 +10,7 @@ use std::path::PathBuf;
 mod pebble;
 mod persistence;
 mod recording;
-use pebble::RecordingForm;
+use pebble::WebhookPayload;
 
 #[derive(Clone)]
 struct AppState {
@@ -60,7 +60,7 @@ async fn main() {
 async fn handle_webhook(
     State(state): State<AppState>,
     headers: HeaderMap,
-    TypedMultipart(form): TypedMultipart<RecordingForm>,
+    TypedMultipart(form): TypedMultipart<WebhookPayload>,
 ) -> Result<&'static str, StatusCode> {
     let expected = format!("Bearer {}", state.auth_token);
     match headers.get("authorization") {
@@ -86,7 +86,7 @@ async fn handle_webhook(
         .and_then(|v| v.to_str().ok())
         .and_then(|v| v.parse::<usize>().ok());
 
-    let recording = form.into_recording(audio_size_hint).map_err(|e| {
+    let recording = form.into_pebble_recording(audio_size_hint).map_err(|e| {
         eprintln!("{e}");
         StatusCode::BAD_REQUEST
     })?;
