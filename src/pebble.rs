@@ -1,3 +1,4 @@
+use crate::metadata::AudioPayload;
 use axum_typed_multipart::{FieldData, TryFromMultipart};
 use bytes::Bytes;
 use chrono::{DateTime, Utc};
@@ -18,7 +19,7 @@ impl RecordingForm {
     /// Convert into the domain type. Fail if the `X-Audio-Size` header
     /// disagrees with the actual buffered audio length or `recordedAt`
     /// timestamp is wrong
-    pub fn into_recording(self, audio_size_hint: Option<usize>) -> Result<Recording, String> {
+    pub fn into_recording(self, audio_size_hint: Option<usize>) -> Result<PebbleRecording, String> {
         let recorded_at = DateTime::from_timestamp_millis(self.recorded_at_ms as i64).ok_or(
             format!("invalid recordedAt timestamp: {}", self.recorded_at_ms),
         )?;
@@ -39,20 +40,13 @@ impl RecordingForm {
             None
         };
 
-        Ok(Recording {
+        Ok(PebbleRecording {
             client: self.client,
             recorded_at,
             transcription: self.transcription,
             audio,
         })
     }
-}
-
-#[derive(Serialize)]
-pub struct AudioPayload {
-    pub size_bytes: usize,
-    #[serde(skip)]
-    pub data: Bytes,
 }
 
 impl std::fmt::Debug for AudioPayload {
@@ -64,7 +58,7 @@ impl std::fmt::Debug for AudioPayload {
 }
 
 #[derive(Debug, Serialize)]
-pub struct Recording {
+pub struct PebbleRecording {
     pub client: String,
     pub recorded_at: DateTime<Utc>,
     pub transcription: Option<String>,

@@ -8,9 +8,9 @@ use axum_typed_multipart::TypedMultipart;
 use std::path::PathBuf;
 
 mod metadata;
+mod pebble;
 mod persistence;
-mod recording;
-use recording::RecordingForm;
+use pebble::RecordingForm;
 
 #[derive(Clone)]
 struct AppState {
