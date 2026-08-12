@@ -1,4 +1,4 @@
-use crate::metadata::AudioPayload;
+use crate::recording::AudioPayload;
 use axum_typed_multipart::{FieldData, TryFromMultipart};
 use bytes::Bytes;
 use chrono::{DateTime, Utc};
