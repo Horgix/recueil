@@ -109,7 +109,7 @@ async fn handle_webhook(
                     StatusCode::INTERNAL_SERVER_ERROR
                 })?;
         }
-        persistence::save_metadata(dir, &recording)
+        persistence::save_recording_info(dir, &recording)
             .await
             .map_err(|e| {
                 eprintln!("failed to save metadata: {e}");
