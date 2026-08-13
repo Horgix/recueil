@@ -68,6 +68,7 @@ mod tests {
         assert!(recording.audio.is_none());
         assert!(recording.transcriptions.is_none());
     }
+
     #[test]
     fn pebble_recording_to_recording_with_audio() {
         let creation_time = DateTime::from_timestamp_millis(1_000_000).unwrap();
@@ -84,6 +85,7 @@ mod tests {
         assert!(recording.audio.is_some());
         assert_eq!(recording.audio.unwrap().size_bytes, 123);
     }
+
     #[test]
     fn pebble_recording_to_recording_with_transcription() {
         let creation_time = DateTime::from_timestamp_millis(1_000_000).unwrap();
@@ -99,6 +101,7 @@ mod tests {
         assert_eq!(transcriptions[0].done_by, TranscriptionSource::PebbleApp);
         assert_eq!(transcriptions[0].content, "dummy transcription");
     }
+
     #[test]
     fn pebble_recording_to_recording_with_audio_path() {
         let creation_time = DateTime::from_timestamp_millis(1_000_000).unwrap();
