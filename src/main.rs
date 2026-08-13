@@ -7,16 +7,19 @@ use axum::{
 use axum_typed_multipart::TypedMultipart;
 use std::path::PathBuf;
 
+mod audiocpp;
 mod pebble;
 mod persistence;
 mod recording;
+use audiocpp::AudioCppConfig;
 use pebble::WebhookPayload;
-use recording::Recording;
+use recording::{Recording, TranscriptionSource};
 
 #[derive(Clone)]
 struct AppState {
     auth_token: String,
     storage_dir: Option<PathBuf>,
+    audiocpp: Option<AudioCppConfig>,
 }
 
 #[tokio::main]
@@ -41,9 +44,39 @@ async fn main() {
         println!("Storage directory: {}", dir.display());
     }
 
+    let audiocpp = if let Ok(host) = std::env::var("AUDIOCPP_HOST") {
+        let model = match std::env::var("AUDIOCPP_MODEL_ID") {
+            Ok(m) => m,
+            Err(_) => {
+                eprintln!("AUDIOCPP_HOST is set but AUDIOCPP_MODEL_ID is not, refusing to start");
+                std::process::exit(1);
+            }
+        };
+        let config = AudioCppConfig {
+            host,
+            model,
+            language: std::env::var("AUDIOCPP_LANGUAGE").ok(),
+        };
+        println!(
+            "Audio.cpp configuration: host={}, model={}, language={:?}",
+            config.host, config.model, config.language
+        );
+        Some(config)
+    } else {
+        None
+    };
+
+    if audiocpp.is_some() && storage_dir.is_none() {
+        eprintln!(
+            "AUDIOCPP_HOST is set but LOCAL_FILES_STORAGE_DIRECTORY is not, refusing to start"
+        );
+        std::process::exit(1);
+    }
+
     let state = AppState {
         auth_token,
         storage_dir,
+        audiocpp,
     };
 
     let app = Router::new()
@@ -91,7 +124,6 @@ async fn handle_webhook(
         eprintln!("{e}");
         StatusCode::BAD_REQUEST
     })?;
-    println!("{pebble_recording:#?}");
 
     let persisted_audio_file = if let Some(dir) = &state.storage_dir {
         if let Some(transcription) = &pebble_recording.transcription {
@@ -118,7 +150,20 @@ async fn handle_webhook(
         None
     };
 
-    let recording = Recording::from(&pebble_recording, persisted_audio_file);
+    let mut recording = Recording::from(&pebble_recording, persisted_audio_file);
+
+    if let (Some(audiocpp_config), Some(audio_info)) = (&state.audiocpp, &recording.audio) {
+        if let Some(path) = &audio_info.path {
+            match audiocpp::transcribe(audiocpp_config, path).await {
+                Ok(response) => {
+                    println!("audiocpp transcription received");
+                    recording.add_transcription(TranscriptionSource::AudioCpp, response.text);
+                }
+                Err(e) => eprintln!("audiocpp transcription failed: {e}"),
+            }
+        }
+    }
+    println!("{recording:#?}");
     if let Some(dir) = &state.storage_dir {
         persistence::save_recording_info(dir, &recording)
             .await
