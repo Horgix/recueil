@@ -35,22 +35,16 @@ impl Recording {
         Recording {
             recording_source: pebblerecording.client.clone(),
             recorded_at: pebblerecording.recorded_at,
-            audio: if let Some(audio_payload) = &pebblerecording.audio {
-                Some(AudioInfo {
-                    size_bytes: audio_payload.size_bytes,
-                    path: audio_path,
-                })
-            } else {
-                None
-            },
-            transcriptions: if let Some(pebbletranscription) = &pebblerecording.transcription {
-                Some(vec![Transcription {
+            audio: pebblerecording.audio.as_ref().map(|a| AudioInfo {
+                size_bytes: a.size_bytes,
+                path: audio_path,
+            }),
+            transcriptions: pebblerecording.transcription.as_ref().map(|t| {
+                vec![Transcription {
                     done_by: TranscriptionSource::PebbleApp,
-                    content: pebbletranscription.clone(),
-                }])
-            } else {
-                None
-            },
+                    content: t.clone(),
+                }]
+            }),
         }
     }
 }
