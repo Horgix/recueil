@@ -3,15 +3,13 @@ use std::io;
 use std::path::{Path, PathBuf};
 use tokio::io::AsyncWriteExt;
 
-use crate::pebble::PebbleRecording;
 use crate::recording::Recording;
 
 const DATETIME_FORMAT: &str = "%Y-%m-%dT%H-%M-%SZ";
 
-pub async fn save_recording_info(dir: &Path, recording: &PebbleRecording) -> Result<(), io::Error> {
-    let metadata = Recording::from(recording);
+pub async fn save_recording_info(dir: &Path, recording: &Recording) -> Result<(), io::Error> {
     let path = dir.join("recordings.ndjson");
-    let line = serde_json::to_string(&metadata)
+    let line = serde_json::to_string(&recording)
         .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
     let mut file = tokio::fs::OpenOptions::new()
         .create(true)

@@ -11,6 +11,7 @@ mod pebble;
 mod persistence;
 mod recording;
 use pebble::WebhookPayload;
+use recording::Recording;
 
 #[derive(Clone)]
 struct AppState {
@@ -86,29 +87,33 @@ async fn handle_webhook(
         .and_then(|v| v.to_str().ok())
         .and_then(|v| v.parse::<usize>().ok());
 
-    let recording = form.into_pebble_recording(audio_size_hint).map_err(|e| {
+    let pebble_recording = form.into_pebble_recording(audio_size_hint).map_err(|e| {
         eprintln!("{e}");
         StatusCode::BAD_REQUEST
     })?;
-    println!("{recording:#?}");
+    println!("{pebble_recording:#?}");
 
     if let Some(dir) = &state.storage_dir {
-        if let Some(transcription) = &recording.transcription {
-            persistence::save_transcription(dir, &recording.recorded_at, transcription)
+        if let Some(transcription) = &pebble_recording.transcription {
+            persistence::save_transcription(dir, &pebble_recording.recorded_at, transcription)
                 .await
                 .map_err(|e| {
                     eprintln!("failed to save transcription: {e}");
                     StatusCode::INTERNAL_SERVER_ERROR
                 })?;
         }
-        if let Some(audio) = &recording.audio {
-            persistence::save_audio(dir, &recording.recorded_at, &audio.data)
+        if let Some(audio) = &pebble_recording.audio {
+            persistence::save_audio(dir, &pebble_recording.recorded_at, &audio.data)
                 .await
                 .map_err(|e| {
                     eprintln!("failed to save audio: {e}");
                     StatusCode::INTERNAL_SERVER_ERROR
                 })?;
         }
+    }
+
+    let recording = Recording::from(&pebble_recording);
+    if let Some(dir) = &state.storage_dir {
         persistence::save_recording_info(dir, &recording)
             .await
             .map_err(|e| {
