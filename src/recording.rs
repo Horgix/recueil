@@ -13,6 +13,7 @@ pub struct AudioInfo {
 #[derive(Debug, Serialize, PartialEq)]
 pub enum TranscriptionSource {
     PebbleApp,
+    AudioCpp,
 }
 
 #[derive(Debug, Serialize)]
@@ -46,6 +47,12 @@ impl Recording {
                 }]
             }),
         }
+    }
+
+    pub fn add_transcription(&mut self, done_by: TranscriptionSource, content: String) {
+        self.transcriptions
+            .get_or_insert_with(Vec::new)
+            .push(Transcription { done_by, content });
     }
 }
 

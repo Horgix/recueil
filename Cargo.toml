@@ -11,4 +11,5 @@ bytes = "1"
 tokio = { version = "1.53", features = ["full"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1"
+reqwest = { version = "0.12", features = ["multipart", "json"] }
 chrono = { version = "0.4", features = ["serde"] }
