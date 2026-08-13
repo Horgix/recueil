@@ -93,7 +93,7 @@ async fn handle_webhook(
     })?;
     println!("{pebble_recording:#?}");
 
-    if let Some(dir) = &state.storage_dir {
+    let persisted_audio_file = if let Some(dir) = &state.storage_dir {
         if let Some(transcription) = &pebble_recording.transcription {
             persistence::save_transcription(dir, &pebble_recording.recorded_at, transcription)
                 .await
@@ -101,18 +101,24 @@ async fn handle_webhook(
                     eprintln!("failed to save transcription: {e}");
                     StatusCode::INTERNAL_SERVER_ERROR
                 })?;
-        }
+        };
         if let Some(audio) = &pebble_recording.audio {
-            persistence::save_audio(dir, &pebble_recording.recorded_at, &audio.data)
-                .await
-                .map_err(|e| {
-                    eprintln!("failed to save audio: {e}");
-                    StatusCode::INTERNAL_SERVER_ERROR
-                })?;
+            Some(
+                persistence::save_audio(dir, &pebble_recording.recorded_at, &audio.data)
+                    .await
+                    .map_err(|e| {
+                        eprintln!("failed to save audio: {e}");
+                        StatusCode::INTERNAL_SERVER_ERROR
+                    })?,
+            )
+        } else {
+            None
         }
-    }
+    } else {
+        None
+    };
 
-    let recording = Recording::from(&pebble_recording);
+    let recording = Recording::from(&pebble_recording, persisted_audio_file);
     if let Some(dir) = &state.storage_dir {
         persistence::save_recording_info(dir, &recording)
             .await
