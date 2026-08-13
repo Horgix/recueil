@@ -1,8 +1,22 @@
-use crate::recording::AudioPayload;
 use axum_typed_multipart::{FieldData, TryFromMultipart};
 use bytes::Bytes;
 use chrono::{DateTime, Utc};
 use serde::Serialize;
+
+#[derive(Serialize)]
+pub struct AudioPayload {
+    pub size_bytes: usize,
+    #[serde(skip)]
+    pub data: Bytes,
+}
+
+impl std::fmt::Debug for AudioPayload {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AudioPayload")
+            .field("size_bytes", &self.size_bytes)
+            .finish()
+    }
+}
 
 /// Raw multipart form as sent by the Index webhook.
 /// Field names map directly to the multipart field names from the spec.
