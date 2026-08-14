@@ -76,6 +76,138 @@ Local re-transcription via audio.cpp currently requires `ffmpeg` to be installed
 
 This is a temporary dependency. The plan is to replace it with a pure-Rust implementation (likely Symphonia + hound ?) so that no native tooling needs to be pre-installed.
 
+## How to run Recueil yourself
+
+### Docker (recommended)
+
+`ffmpeg` is bundled in the image, so no extra setup is needed.
+
+Minimal — stores nothing to disk, useful to inspect incoming webhooks:
+
+```sh
+docker run -d \
+  --name recueil \
+  -p 8080:8080 \
+  -e AUTH_TOKEN=your-secret-token \
+  ghcr.io/horgix/recueil:latest
+```
+
+With persistent storage:
+
+```sh
+docker run -d \
+  --name recueil \
+  -p 8080:8080 \
+  -e AUTH_TOKEN=your-secret-token \
+  -e LOCAL_FILES_STORAGE_DIRECTORY=/recueil-data \
+  -v /path/to/your/data:/recueil-data \
+  ghcr.io/horgix/recueil:latest
+```
+
+With persistent storage and local re-transcription via audio.cpp:
+
+```sh
+docker run -d \
+  --name recueil \
+  -p 8080:8080 \
+  -e AUTH_TOKEN=your-secret-token \
+  -e LOCAL_FILES_STORAGE_DIRECTORY=/recueil-data \
+  -e AUDIOCPP_HOST=audiocpp-host:8080 \
+  -e AUDIOCPP_MODEL_ID=your-model-id \
+  -e AUDIOCPP_LANGUAGE=en \
+  -v /path/to/your/data:/recueil-data \
+  ghcr.io/horgix/recueil:latest
+```
+
+Recueil listens on `POST /webhook` on port `8080` (or whatever `PORT` is set to).
+
+### Docker compose
+
+Example with persistent storage, local re-transcription via audio.cpp, and Traefik for exposition:
+
+```yaml
+services:
+  webhook-server:
+    container_name: index-webhook-server
+    image: ghcr.io/horgix/recueil:latest # Pin to a specific version in production
+    # Optional
+    # user: <redacted UID>:<redacted GID> # Dedicated user/group for the container to avoid running as root
+    restart: unless-stopped
+    networks:
+      - traefik_proxy
+      - recueil
+    labels:
+      traefik.enable: true
+      traefik.http.routers.recueil.rule: Host(`<redacted host>`)
+      traefik.http.services.recueil.loadbalancer.server.port: 8080
+    environment:
+      AUTH_TOKEN: <redacted>
+      LOCAL_FILES_STORAGE_DIRECTORY: /recueil-data
+      AUDIOCPP_HOST: audiocpp:8080
+      AUDIOCPP_MODEL_ID: parakeet
+      AUDIOCPP_LANGUAGE: en  # optional
+    volumes:
+      - recueil-data:/recueil-data
+  audiocpp:
+    container_name: index-audiocpp
+    image: ghcr.io/0xshug0/audio.cpp:full-cpu
+    # Optional
+    # user: <redacted UID>:<redacted GID> # Dedicated user/group for the container to avoid running as root
+    restart: unless-stopped
+    networks:
+      - recueil
+    volumes:
+      - /path/to/audio.cpp/models:/models:ro
+      - /path/to/audio.cpp/config.json:/server.json:ro
+    command: server --config /server.json
+
+networks:
+  traefik_proxy:
+    external: true
+  recueil:
+```
+
+With the following Audio.cpp requirements:
+
+First, getting the model:
+
+```bash
+cd /path/to/
+git clone https://github.com/0xShug0/audio.cpp.git
+cd audio.cpp
+python tools/model_manager_v2.py install parakeet_tdt_q8_0
+```
+
+Second, writing the configuration file for Audio.cpp in `/path/to/audio.cpp/config.json`:
+
+```json
+{
+  "host": "0.0.0.0",
+  "port": 8080,
+  "backend": "cpu",
+  "models": [
+    {
+      "id": "parakeet",
+      "family": "parakeet_tdt",
+      "path": "/models/Parakeet-TDT-0.6B-v3-GGUF/parakeet-tdt-0.6b-v3-q8_0.gguf",
+      "task": "asr",
+      "mode": "offline"
+    }
+  ]
+}
+```
+
+### Binary
+
+Download the latest binary from the [GitHub releases](https://github.com/Horgix/recueil/releases) page, then:
+
+```sh
+AUTH_TOKEN=your-secret-token \
+./index-webhook
+```
+
+See the [Dependencies](#dependencies) section above if you intend to use local re-transcription via audio.cpp.
+
 ## Name
 
 **recueil** is a French word for a gathered collection; an anthology of things picked up over time. It comes from *recueillir*: to collect, but also to shelter and take in. That felt right for a service that quietly receives your spoken thoughts from a Pebble Index ring, transcribes them, and keeps them safe; building, over time, a personal _recueil_ of your voice notes.
