@@ -18,7 +18,7 @@ Pebble Index 01 ring → Pebble app → webhook → recueil
 Example of resulting `recordings.ndjson` entry (pretty formatted for clarity):
 
 ```json
-{"
+{
   "recording_source": "ring",
   "recorded_at": "2025-12-31T23:59:59Z",
   "audio": {
