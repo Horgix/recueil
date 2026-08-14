@@ -1,6 +1,6 @@
 # Recueil — A Pebble Index 01 ring webhook receiver
 
-_Recueil_ is a self-hosted webhook receiver that collects, transcribes, and stores voice recordings from your [Pebble Index 01](https://repebble.com/index) ring.
+> _Recueil_ is a self-hosted webhook receiver that collects, transcribes, and stores voice recordings from your [Pebble Index 01](https://repebble.com/index) ring.
 
 ## What it does
 
