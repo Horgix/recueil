@@ -87,7 +87,7 @@ jobs:
       contents: write
     steps:
       - name: Download binary artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: index-webhook-x86_64-linux-musl
           path: artifacts/
