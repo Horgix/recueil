@@ -2,8 +2,11 @@ on: [push]
 
 name: Build
 
+env:
+  CARGO_TERM_COLOR: always
+
 jobs:
-  build:
+  build-binary:
     name: Build binary (release mode)
     runs-on: ubuntu-latest 
     steps:
@@ -22,4 +25,5 @@ jobs:
             ${{ runner.os }}-build-${{ env.cache-name }}-
             ${{ runner.os }}-build-
             ${{ runner.os }}-
+      - run: cargo fetch # Dedicated step for better insights in observed Actions runs
       - run: cargo build --release --all-features
