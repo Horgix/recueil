@@ -68,6 +68,14 @@ All configuration is via environment variables.
 
 > `AUDIOCPP_HOST` requires `LOCAL_FILES_STORAGE_DIRECTORY` to be set, as the audio file must be saved to disk before it can be re-transcribed.
 
+## Dependencies
+
+### `ffmpeg` (temporary)
+
+Local re-transcription via audio.cpp currently requires `ffmpeg` to be installed and available on `$PATH`. It is used to convert the MP4 audio received from the Pebble app into a 16 kHz mono WAV before sending it to audio.cpp.
+
+This is a temporary dependency. The plan is to replace it with a pure-Rust implementation (likely Symphonia + hound ?) so that no native tooling needs to be pre-installed.
+
 ## Name
 
 **recueil** is a French word for a gathered collection; an anthology of things picked up over time. It comes from *recueillir*: to collect, but also to shelter and take in. That felt right for a service that quietly receives your spoken thoughts from a Pebble Index ring, transcribes them, and keeps them safe; building, over time, a personal _recueil_ of your voice notes.
