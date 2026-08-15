@@ -1,5 +1,8 @@
 # Recueil — A Pebble Index 01 ring webhook receiver
 
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/Horgix/recueil/build.yml)
+![GitHub License (MIT)](https://img.shields.io/github/license/Horgix/recueil)
+
 > _Recueil_ is a self-hosted webhook receiver that collects, transcribes, and stores voice recordings from your [Pebble Index 01](https://repebble.com/index) ring.
 
 ## What it does
