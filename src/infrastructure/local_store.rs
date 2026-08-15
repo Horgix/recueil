@@ -4,7 +4,7 @@ use crate::domain::recording_store::RecordingStore;
 use chrono::{DateTime, Utc};
 use std::{
     fmt::Debug,
-    io,
+    io::{self, BufRead},
     path::{Path, PathBuf},
 };
 use tokio::io::AsyncWriteExt;
@@ -78,5 +78,18 @@ impl RecordingStore for LocalRecordingStore {
         tokio::fs::write(&path, format!("{transcription}\n")).await?;
         println!("transcription saved to {}", path.display());
         Ok(path)
+    }
+
+    fn get_all_recordings(&self) -> Result<Vec<Recording>, io::Error> {
+        let file = std::fs::File::open(&self.ndjson_path)?;
+        let reader = std::io::BufReader::new(file);
+        let mut recordings = Vec::new();
+        for line in reader.lines() {
+            let line = line?;
+            let recording: Recording = serde_json::from_str(&line)
+                .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+            recordings.push(recording);
+        }
+        Ok(recordings)
     }
 }

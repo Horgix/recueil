@@ -1,28 +1,28 @@
 use crate::pebble::PebbleRecording;
 
 use chrono::{DateTime, Utc};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct AudioInfo {
     pub size_bytes: usize,
     pub path: Option<PathBuf>, // TODO: Make this less dependant on _local_ storage
 }
 
-#[derive(Debug, Serialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub enum TranscriptionSource {
     PebbleApp,
     AudioCpp,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Transcription {
     pub done_by: TranscriptionSource,
     pub content: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Recording {
     pub recording_source: String,
     pub recorded_at: DateTime<Utc>,
