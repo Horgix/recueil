@@ -1,13 +1,13 @@
+use crate::pebble::PebbleRecording;
+
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 use std::path::PathBuf;
 
-use crate::pebble::PebbleRecording;
-
 #[derive(Debug, Serialize)]
 pub struct AudioInfo {
     pub size_bytes: usize,
-    pub path: Option<PathBuf>,
+    pub path: Option<PathBuf>, // TODO: Make this less dependant on _local_ storage
 }
 
 #[derive(Debug, Serialize, PartialEq)]
@@ -32,6 +32,7 @@ pub struct Recording {
 }
 
 impl Recording {
+    // TODO: move this to interface
     pub fn from(pebblerecording: &PebbleRecording, audio_path: Option<PathBuf>) -> Self {
         Recording {
             recording_source: pebblerecording.client.clone(),

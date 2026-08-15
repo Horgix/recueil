@@ -9,16 +9,20 @@ use std::path::PathBuf;
 
 mod audiocpp;
 mod pebble;
-mod persistence;
-mod recording;
 use audiocpp::AudioCppConfig;
 use pebble::WebhookPayload;
-use recording::{Recording, TranscriptionSource};
+
+mod domain;
+use domain::recording::{Recording, TranscriptionSource};
+use domain::recording_store::RecordingStore;
+
+mod infrastructure;
+use infrastructure::local_store::LocalRecordingStore;
 
 #[derive(Clone)]
-struct AppState {
+struct AppState<RS: RecordingStore> {
     auth_token: String,
-    storage_dir: Option<PathBuf>,
+    persistent_store: Option<RS>,
     audiocpp: Option<AudioCppConfig>,
 }
 
@@ -40,9 +44,10 @@ async fn main() {
     let storage_dir = std::env::var("LOCAL_FILES_STORAGE_DIRECTORY")
         .ok()
         .map(PathBuf::from);
-    if let Some(ref dir) = storage_dir {
-        println!("Storage directory: {}", dir.display());
-    }
+    let local_store = storage_dir
+        .as_ref()
+        .map(|dir| LocalRecordingStore::new(dir));
+    println!("Storage: {:?}", local_store);
 
     let audiocpp = if let Ok(host) = std::env::var("AUDIOCPP_HOST") {
         let model = match std::env::var("AUDIOCPP_MODEL_ID") {
@@ -75,7 +80,7 @@ async fn main() {
 
     let state = AppState {
         auth_token,
-        storage_dir,
+        persistent_store: local_store,
         audiocpp,
     };
 
@@ -92,7 +97,7 @@ async fn main() {
 }
 
 async fn handle_webhook(
-    State(state): State<AppState>,
+    State(state): State<AppState<impl RecordingStore>>,
     headers: HeaderMap,
     TypedMultipart(form): TypedMultipart<WebhookPayload>,
 ) -> Result<&'static str, StatusCode> {
@@ -125,9 +130,10 @@ async fn handle_webhook(
         StatusCode::BAD_REQUEST
     })?;
 
-    let persisted_audio_file = if let Some(dir) = &state.storage_dir {
+    let persisted_audio_file = if let Some(store) = &state.persistent_store {
         if let Some(transcription) = &pebble_recording.transcription {
-            persistence::save_transcription(dir, &pebble_recording.recorded_at, transcription)
+            store
+                .save_transcription(&pebble_recording.recorded_at, transcription)
                 .await
                 .map_err(|e| {
                     eprintln!("failed to save transcription: {e}");
@@ -136,7 +142,8 @@ async fn handle_webhook(
         };
         if let Some(audio) = &pebble_recording.audio {
             Some(
-                persistence::save_audio(dir, &pebble_recording.recorded_at, &audio.data)
+                store
+                    .save_audio(&pebble_recording.recorded_at, &audio.data)
                     .await
                     .map_err(|e| {
                         eprintln!("failed to save audio: {e}");
@@ -164,13 +171,11 @@ async fn handle_webhook(
         }
     }
     println!("{recording:#?}");
-    if let Some(dir) = &state.storage_dir {
-        persistence::save_recording_info(dir, &recording)
-            .await
-            .map_err(|e| {
-                eprintln!("failed to save metadata: {e}");
-                StatusCode::INTERNAL_SERVER_ERROR
-            })?;
+    if let Some(store) = &state.persistent_store {
+        store.save_recording_info(&recording).await.map_err(|e| {
+            eprintln!("failed to save recording: {e}");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
     }
 
     Ok("ok")
