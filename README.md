@@ -41,6 +41,10 @@ Example of resulting `recordings.ndjson` entry (pretty formatted for clarity):
 }
 ```
 
+## What it does _not_ do
+
+Recueil doesn´t aim at embedding anything really smart about the voice notes it receives. It is not a personal assistant and it does not try to understand your notes. If you want to do that though, Recueil can definitely be the entrypoint for the recording reception, storage and transcription, and then hand over to whatever software / AI agent you want.
+
 ## Storage layout
 
 When `LOCAL_FILES_STORAGE_DIRECTORY` is set, recueil writes the following structure:
