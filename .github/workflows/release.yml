@@ -39,7 +39,7 @@ jobs:
       - run: cargo build --release --all-features --target x86_64-unknown-linux-musl
 
       - name: Upload binary artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: index-webhook-x86_64-linux-musl
           path: target/x86_64-unknown-linux-musl/release/index-webhook
