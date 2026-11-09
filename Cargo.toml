@@ -6,7 +6,7 @@ edition = "2024"
 
 [dependencies]
 axum = { version = "0.8", features = ["multipart"] }
-axum_typed_multipart = "0.16"
+axum_typed_multipart = "0.17"
 bytes = "1"
 tokio = { version = "1.53", features = ["full"] }
 serde = { version = "1.0.229", features = ["derive"] }
