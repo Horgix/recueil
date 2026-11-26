@@ -18,12 +18,14 @@ use domain::recording_store::RecordingStore;
 
 mod infrastructure;
 use infrastructure::local_store::LocalRecordingStore;
+use infrastructure::matrix::MatrixClient;
 
 #[derive(Clone)]
 struct AppState<RS: RecordingStore> {
     auth_token: String,
     persistent_store: Option<RS>,
     audiocpp: Option<AudioCppConfig>,
+    matrix: Option<MatrixClient>,
 }
 
 #[tokio::main]
@@ -78,10 +80,29 @@ async fn main() {
         std::process::exit(1);
     }
 
+    let matrix = match (
+        std::env::var("MATRIX_HOMESERVER").ok(),
+        std::env::var("MATRIX_ACCESS_TOKEN").ok(),
+        std::env::var("MATRIX_ROOM_ID").ok(),
+    ) {
+        (Some(homeserver), Some(access_token), Some(room_id)) => {
+            println!("Matrix notifications enabled for room {room_id} on {homeserver}");
+            Some(MatrixClient::new(homeserver, access_token, room_id))
+        }
+        (None, None, None) => None,
+        _ => {
+            eprintln!(
+                "MATRIX_HOMESERVER, MATRIX_ACCESS_TOKEN and MATRIX_ROOM_ID must all be set together"
+            );
+            std::process::exit(1);
+        }
+    };
+
     let state = AppState {
         auth_token,
         persistent_store: local_store,
         audiocpp,
+        matrix,
     };
 
     let app = Router::new()
@@ -171,6 +192,18 @@ async fn handle_webhook(
         }
     }
     println!("{recording:#?}");
+    if let Some(matrix) = &state.matrix {
+        if let Some(transcriptions) = &recording.transcriptions {
+            for transcription in transcriptions {
+                if transcription.done_by != TranscriptionSource::PebbleApp {
+                    continue;
+                }
+                if let Err(e) = matrix.send_message(&transcription.content).await {
+                    eprintln!("failed to forward transcription to Matrix: {e}");
+                }
+            }
+        }
+    }
     if let Some(store) = &state.persistent_store {
         store.save_recording_info(&recording).await.map_err(|e| {
             eprintln!("failed to save recording: {e}");
